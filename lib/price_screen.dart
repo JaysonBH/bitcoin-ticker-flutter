@@ -12,8 +12,14 @@ class PriceScreen extends StatefulWidget {
 class _PriceScreenState extends State<PriceScreen> {
   String selectedCurrency;
   List<Widget> allCryptoCards;
-  var rateData;
-  double rate = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedCurrency = 'USD';
+    allCryptoCards = emptyCryptoCards(selectedCurrency);
+    this.updateUI();
+  }
 
   List<DropdownMenuItem<String>> populateMenu() {
     List<DropdownMenuItem<String>> menuItems = [];
@@ -24,18 +30,6 @@ class _PriceScreenState extends State<PriceScreen> {
     return menuItems;
   }
 
-  DropdownButton<String> getAndroidDropdown() {
-    return DropdownButton<String>(
-        value: selectedCurrency,
-        items: populateMenu(),
-        onChanged: (value) {
-          setState(() {
-            selectedCurrency = value;
-            allCryptoCards = cryptoCards(selectedCurrency);
-          });
-        });
-  }
-
   List<Widget> cupertinoMenu() {
     List<Widget> menu = [];
 
@@ -43,14 +37,30 @@ class _PriceScreenState extends State<PriceScreen> {
     return menu;
   }
 
+  DropdownButton<String> getAndroidDropdown() {
+    return DropdownButton<String>(
+        value: selectedCurrency,
+        items: populateMenu(),
+        onChanged: (value) async {
+          selectedCurrency = value;
+          var cards = await cryptoCards(selectedCurrency);
+          setState(() {
+            allCryptoCards = cards;
+          });
+        });
+  }
+
   CupertinoPicker getiOSPicker() {
     return CupertinoPicker(
         itemExtent: 32.0,
-        onSelectedItemChanged: (selectedIndex) {
+        onSelectedItemChanged: (selectedIndex) async {
           print(currenciesList[selectedIndex]);
+
+          selectedCurrency = currenciesList[selectedIndex];
+          var cards = await cryptoCards(selectedCurrency);
+
           setState(() {
-            selectedCurrency = currenciesList[selectedIndex];
-            allCryptoCards = cryptoCards(selectedCurrency);
+            allCryptoCards = cards;
           });
         },
         children: cupertinoMenu());
@@ -59,7 +69,7 @@ class _PriceScreenState extends State<PriceScreen> {
   List<Widget> emptyCryptoCards(String fCurrency) {
     List<Widget> cards = [];
     for (String cryptoCurrency in cryptoList) {
-      double rate = 0.0;
+      String rate = '?';
       cards.add(CryptoCard(
         cryptoCurrency: cryptoCurrency,
         fiatCurrency: fCurrency,
@@ -69,27 +79,29 @@ class _PriceScreenState extends State<PriceScreen> {
     return cards;
   }
 
-  List<Widget> cryptoCards(String fCurrency) {
+  Future<List<Widget>> cryptoCards(String fCurrency) async {
     List<Widget> cards = [];
+
     for (String cryptoCurrency in cryptoList) {
-      //TODO Retrieve Actual rate from the API
-      double rate = 0.0;
-      cards.add(CryptoCard(
+      // Retrieve Actual rate from the API
+      String rate = await CoinData().getCoinRate(cryptoCurrency, fCurrency);
+
+      Widget card = CryptoCard(
         cryptoCurrency: cryptoCurrency,
         fiatCurrency: fCurrency,
         rate: rate,
-      ));
+      );
+
+      cards.add(card);
     }
     return cards;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    //rateData = CoinData().getCoinRate('BTC', 'USD');
-    //print(rateData);
-    selectedCurrency = 'USD';
-    allCryptoCards = emptyCryptoCards(selectedCurrency);
+  void updateUI() async {
+    var pulledRateCards = await cryptoCards(selectedCurrency);
+    setState(() {
+      allCryptoCards = pulledRateCards;
+    });
   }
 
   @override
@@ -100,10 +112,8 @@ class _PriceScreenState extends State<PriceScreen> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        //crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Column(
-            //mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: allCryptoCards,
           ),

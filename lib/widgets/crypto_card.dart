@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class CryptoCard extends StatelessWidget {
   final String cryptoCurrency;
   final String fiatCurrency;
-  final double rate;
+  final String rate;
 
   CryptoCard({this.cryptoCurrency, this.fiatCurrency, this.rate});
 
